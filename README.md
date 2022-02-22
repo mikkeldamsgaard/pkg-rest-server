@@ -6,5 +6,5 @@ Please consult the toitdoc for the class RestServer for detailed instructions on
 
 Features:
 * Easy setup of call backs
-* Supports GET, POST, DELETE, GET and OPTIONS
+* Supports GET, POST, PUT, DELETE and OPTIONS methods
 * Supports path variables in an intuite way
