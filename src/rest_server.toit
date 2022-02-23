@@ -203,7 +203,9 @@ class Paths_:
             "data": (rest.exception_data_.call)
           }
           res.respond 500 msg.to_string_non_throwing
-        finally:
+        finally: | is_exception e |
+          if is_exception:
+            logger_.error "Received error in error handler. $e.value, trace: $(base64.encode e.trace)"
           // Ignore, if the handler already replied before throwing and exception, we ignore the exception
           return
 
@@ -248,7 +250,7 @@ class RestResponse:
   */
   respond code/int body/any:
     if body is string:
-      http_res.headers.set "Content-Length" body.size
+      http_res.headers.set "Content-Length" "$body.size"
 
     http_res.write_headers code
     http_res.write body
