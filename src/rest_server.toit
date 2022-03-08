@@ -249,7 +249,7 @@ class RestResponse:
   Sends a response with a $code and $body
   */
   respond code/int body/any:
-    if body is string:
+    if body is string or body is ByteArray:
       http_res.headers.set "Content-Length" "$body.size"
 
     http_res.write_headers code
