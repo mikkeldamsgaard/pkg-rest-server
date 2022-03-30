@@ -66,8 +66,7 @@ class RestServer:
     if exception_data: exception_data_ = exception_data
     else: exception_data_ = :: null
     run_ socket
-    List
-  
+
   /**
   Adds a GET $path to this rest server served by $handler
   */
