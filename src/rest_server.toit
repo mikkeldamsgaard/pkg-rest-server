@@ -241,7 +241,7 @@ class RestResponse:
   /**
   Sends the standard 200 message response with $body
   */
-  ok body/any:
+  ok body/any="OK\n":
     respond STATUS_OK body
 
   /**
