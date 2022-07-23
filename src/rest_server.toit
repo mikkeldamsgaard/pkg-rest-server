@@ -101,7 +101,7 @@ class RestServer:
     path_elements := split_path_in_add_ path
     paths.add path_elements handler
 
-    logger_.info "Added path $path"
+    logger_.info "Added $method: $path"
 
   run_ socket/tcp.ServerSocket:
     task::
