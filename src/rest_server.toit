@@ -5,6 +5,7 @@ import net.tcp
 import encoding.base64
 import encoding.json
 import log
+import monitor show Latch
 
 OPTIONS ::= "OPTIONS"
 
@@ -57,6 +58,9 @@ class RestServer:
   requests_paths_/Map := {:}
   exception_data_/Lambda
 
+  task_/Task? := null
+  completed_latch_/Latch := Latch
+
   /**
   Creates a new RestServer listening on $socket. Optionally provide an $exception_data lambda to provide additional information
   when catching an exception
@@ -65,7 +69,11 @@ class RestServer:
     server_ = Server
     if exception_data: exception_data_ = exception_data
     else: exception_data_ = :: null
-    run_ socket
+    task_ = run_ socket
+
+  close:
+    task_.cancel
+    completed_latch_.get
 
   /**
   Adds a GET $path to this rest server served by $handler
@@ -103,10 +111,12 @@ class RestServer:
 
     logger_.info "Added $method: $path"
 
-  run_ socket/tcp.ServerSocket:
-    task::
-      server_.listen socket :: | req res |
-        dispatch_ req res
+  run_ socket/tcp.ServerSocket -> Task:
+    return task::
+      catch --unwind= (: it != CANCELED_ERROR ):
+        server_.listen socket :: | req res |
+          dispatch_ req res
+      completed_latch_.set 1
 
   split_path_in_add_ path/string:
     path_elements := path.split "/"
