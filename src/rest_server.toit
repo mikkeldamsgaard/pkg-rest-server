@@ -6,6 +6,7 @@ import encoding.base64
 import encoding.json
 import log
 import monitor show Latch
+import system.trace
 
 OPTIONS ::= "OPTIONS"
 
@@ -113,10 +114,15 @@ class RestServer:
 
   run_ socket/tcp.ServerSocket -> Task:
     return task::
-      catch --unwind= (: it != CANCELED_ERROR ):
+      try:
         server_.listen socket :: | req res |
           dispatch_ req res
-      completed_latch_.set 1
+      finally: | is_exception exception |
+        critical_do:
+          if exception.value == CANCELED_ERROR:
+            completed_latch_.set 1
+          else:
+            trace.send_trace_message exception.trace
 
   split_path_in_add_ path/string:
     path_elements := path.split "/"
@@ -160,7 +166,7 @@ class Paths_:
   add path/List handler/Lambda:
     if path.size == 1:
       // Tail
-      if path[0][0] == COLON_:
+      if path[0].size > 0 and path[0][0] == COLON_:
         if tail_wildcard_: throw "Multiple tail wild cards for path not supported"
         tail_wildcard_ = TailWildcard_ path[0] handler
         logger_.debug "added wildcard $path[0]"
