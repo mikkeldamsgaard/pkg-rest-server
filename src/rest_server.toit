@@ -133,7 +133,7 @@ class RestServer:
     logger_.info "Received $req.method request for path $req.path"
     paths/Paths_? := requests_paths_.get req.method
     if not paths:
-        s404_ res
+        s404_ req res
         return
 
     path_elements := req.path.split "/"
@@ -142,10 +142,10 @@ class RestServer:
         RestRequest.private_ req 
         RestResponse.private_ res
     if not result:
-      s404_ res
+      s404_ req res
 
-  s404_ resp/ResponseWriter:
-    logger_.info "Path look up failed, returning NOT FOUND"
+  s404_ req/Request resp/ResponseWriter:
+    logger_.info "Path look up failed for $req.method $req.path"
     resp.write_headers 404
 
 COLON_/int ::= ":"[0]
@@ -183,7 +183,6 @@ class Paths_:
       paths.add path[1..] handler
 
   dispatch path/List req/RestRequest resp/RestResponse -> bool:
-    logger_.debug "dispatching: $path"
     if path.size == 1:
       if handlers_.contains path[0]:
         invoke_handler handlers_[path[0]] req resp
