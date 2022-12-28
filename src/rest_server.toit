@@ -10,8 +10,6 @@ import system.trace
 
 OPTIONS ::= "OPTIONS"
 
-logger_/log.Logger ::= log.default.with_name "rest server"
-
 /**
 A server that handles REST requests.
 
@@ -62,12 +60,14 @@ class RestServer:
   task_/Task? := null
   completed_latch_/Latch := Latch
 
+  logger_/log.Logger
   /**
   Creates a new RestServer listening on $socket. Optionally provide an $exception_data lambda to provide additional information
   when catching an exception
   */
-  constructor socket/tcp.ServerSocket exception_data/Lambda?=null:
+  constructor socket/tcp.ServerSocket exception_data/Lambda?=null --logger/log.Logger=(log.default.with_name "rest server"):
     server_ = Server
+    logger_ = logger
     if exception_data: exception_data_ = exception_data
     else: exception_data_ = :: null
     task_ = run_ socket
@@ -169,7 +169,7 @@ class Paths_:
       if path[0].size > 0 and path[0][0] == COLON_:
         if tail_wildcard_: throw "Multiple tail wild cards for path not supported"
         tail_wildcard_ = TailWildcard_ path[0] handler
-        logger_.debug "added wildcard $path[0]"
+        rest.logger_.debug "added wildcard $path[0]"
       else:
         handlers_[path[0]] = handler
     else:
@@ -219,7 +219,7 @@ class Paths_:
           res.respond 500 msg.to_string_non_throwing
         finally: | is_exception e |
           if is_exception:
-            logger_.error "Received error in error handler. $e.value, trace: $(base64.encode e.trace)"
+            rest.logger_.error "Received error in error handler. $e.value, trace: $(base64.encode e.trace)"
           // Ignore, if the handler already replied before throwing and exception, we ignore the exception
           return
 
