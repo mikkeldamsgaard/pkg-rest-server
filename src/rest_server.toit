@@ -61,13 +61,19 @@ class RestServer:
   completed_latch_/Latch := Latch
 
   logger_/log.Logger
+
+  log_control_/Lambda?
   /**
   Creates a new RestServer listening on $socket. Optionally provide an $exception_data lambda to provide additional information
   when catching an exception
   */
-  constructor socket/tcp.ServerSocket exception_data/Lambda?=null --logger/log.Logger=(log.default.with_name "rest server"):
+  constructor socket/tcp.ServerSocket
+      --exception_data/Lambda?=null
+      --logger/log.Logger=(log.default.with_name "rest server")
+      --log_control/Lambda?=null:
     server_ = Server
     logger_ = logger
+    log_control_ = log_control
     if exception_data: exception_data_ = exception_data
     else: exception_data_ = :: null
     task_ = run_ socket
@@ -130,16 +136,18 @@ class RestServer:
     return path_elements[1..]
 
   dispatch_ req/Request res/ResponseWriter:
-    logger_.info "Received $req.method request for path $req.path"
+    rest_request :=  RestRequest.private_ req
+    if not log_control_ or (log_control_.call rest_request):
+      logger_.info "Received $req.method request for path $req.path"
     paths/Paths_? := requests_paths_.get req.method
     if not paths:
         s404_ req res
         return
 
     path_elements := req.path.split "/"
-    result := paths.dispatch 
-        path_elements[1..] 
-        RestRequest.private_ req 
+    result := paths.dispatch
+        path_elements[1..]
+        rest_request
         RestResponse.private_ res
     if not result:
       s404_ req res
