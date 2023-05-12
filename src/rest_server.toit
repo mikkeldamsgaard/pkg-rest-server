@@ -70,13 +70,15 @@ class RestServer:
   constructor socket/tcp.ServerSocket
       --exception_data/Lambda?=null
       --logger/log.Logger=(log.default.with_name "rest server")
-      --log_control/Lambda?=null:
+      --log_control/Lambda?=null
+      --on_error/Lambda=(:: throw it)
+      --trace/bool=false:
     server_ = Server
     logger_ = logger
     log_control_ = log_control
     if exception_data: exception_data_ = exception_data
     else: exception_data_ = :: null
-    task_ = run_ socket
+    task_ = run_ socket --on_error=on_error --trace=trace
 
   close:
     task_.cancel
@@ -118,17 +120,15 @@ class RestServer:
 
     logger_.info "Added $method: $path"
 
-  run_ socket/tcp.ServerSocket -> Task:
+  run_ socket/tcp.ServerSocket --on_error/Lambda --trace/bool -> Task:
     return task::
-      try:
+      e := catch --trace=trace:
         server_.listen socket :: | req res |
           dispatch_ req res
-      finally: | is_exception exception |
-        critical_do:
-          if exception.value == CANCELED_ERROR:
-            completed_latch_.set 1
-          else:
-            trace.send_trace_message exception.trace
+      print "!!!R!!!"
+      critical_do:
+        completed_latch_.set 1
+        if e != CANCELED_ERROR: on_error.call e
 
   split_path_in_add_ path/string:
     path_elements := path.split "/"
