@@ -125,7 +125,6 @@ class RestServer:
       e := catch --trace=trace:
         server_.listen socket :: | req res |
           dispatch_ req res
-      print "!!!R!!!"
       critical_do:
         completed_latch_.set 1
         if e != CANCELED_ERROR: on_error.call e
@@ -139,18 +138,21 @@ class RestServer:
     rest_request :=  RestRequest.private_ req
     if not log_control_ or (log_control_.call rest_request):
       logger_.info "Received $req.method request for path $req.path"
-    paths/Paths_? := requests_paths_.get req.method
-    if not paths:
-        s404_ req res
-        return
+    try:
+      paths/Paths_? := requests_paths_.get req.method
+      if not paths:
+          s404_ req res
+          return
 
-    path_elements := req.path.split "/"
-    result := paths.dispatch
-        path_elements[1..]
-        rest_request
-        RestResponse.private_ res
-    if not result:
-      s404_ req res
+      path_elements := req.path.split "/"
+      result := paths.dispatch
+          path_elements[1..]
+          rest_request
+          RestResponse.private_ res
+      if not result:
+        s404_ req res
+    finally:
+      res.detach.close
 
   s404_ req/Request resp/ResponseWriter:
     logger_.info "Path look up failed for $req.method $req.path"
